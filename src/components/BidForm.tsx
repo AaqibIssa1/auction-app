@@ -18,6 +18,7 @@ export default function BidForm({ listing, onBidSuccess }: Props) {
 		const data = new FormData(e.currentTarget);
 		const bidder = (data.get("bidder") as string).trim();
 		const numAmount = parseFloat(data.get("amount") as string);
+		const form = e.currentTarget
 
 		if (!bidder) {
 			setError("Bidder name is required.");
@@ -32,7 +33,7 @@ export default function BidForm({ listing, onBidSuccess }: Props) {
 		try {
 			const updated = await placeBid(listing.id, bidder, numAmount);
 			onBidSuccess(updated);
-			e.currentTarget.reset();
+			form.reset()
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to place bid");
 		} finally {

@@ -10,3 +10,9 @@ export interface Listing {
 	endsAt: string;
 	imageUrl: string;
 }
+
+export interface Bid {
+	bidder: string;
+	amount: number;
+	placedAt: string;
+}

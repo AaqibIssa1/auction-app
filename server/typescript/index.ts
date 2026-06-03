@@ -33,6 +33,12 @@ interface BidRequest {
 	amount: number;
 }
 
+interface Bid {
+    bidder: string;
+    amount: number;
+    placedAt: string;
+}
+
 interface CreateListingRequest {
 	title: string;
 }
@@ -44,6 +50,8 @@ interface CreateListingRequest {
 const listings: Listing[] = JSON.parse(
 	readFileSync(join(__dirname, "data", "listings.json"), "utf-8"),
 );
+
+const bidHistory: Record<string, Bid[]> = {};
 
 // ============================================================
 // App
@@ -131,7 +139,25 @@ app.post("/api/listings/:id/bids", (req: Request, res: Response) => {
 	listing.currentBid = bid.amount;
 	listing.currentBidder = bid.bidder.trim();
 
+	if (!bidHistory[listing.id]) {
+		bidHistory[listing.id] = [];
+	}
+	bidHistory[listing.id].unshift({
+		bidder: bid.bidder.trim(),
+		amount: bid.amount,
+		placedAt: new Date().toISOString(),
+	});
+
 	return res.status(201).json(listing);
+});
+
+// GET /api/listings/:id/bids
+app.get("/api/listings/:id/bidHistory", (req: Request, res: Response) => {
+    const listing = listings.find((l) => l.id === req.params.id);
+    if (!listing) {
+        return res.status(404).json({ error: "Listing not found" });
+    }
+    return res.json(bidHistory[listing.id] ?? []);
 });
 
 app.listen(PORT, () => {

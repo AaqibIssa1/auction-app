@@ -1,5 +1,8 @@
+import { useState } from "react";
 import BidForm from "./BidForm";
+import BidHistory from "./BidHistory";
 import type { Listing } from "../types";
+
 
 interface Props {
 	listing: Listing;
@@ -17,6 +20,13 @@ function formatDate(iso: string): string {
 }
 
 export default function ListingDetail({ listing, onBidSuccess }: Props) {
+	const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+	const handleBidSuccess = (updated: Listing) => {
+		onBidSuccess(updated);
+		setRefreshTrigger((n) => n + 1);
+	};
+
 	return (
 		<div className="listing-detail">
 			<img
@@ -61,8 +71,10 @@ export default function ListingDetail({ listing, onBidSuccess }: Props) {
 			</div>
 
 			{listing.status === "active" && (
-				<BidForm listing={listing} onBidSuccess={onBidSuccess} />
+				<BidForm listing={listing} onBidSuccess={handleBidSuccess} />
 			)}
+			<br/>
+			<BidHistory listingId={listing.id} refreshTrigger={refreshTrigger} />
 		</div>
 	);
 }

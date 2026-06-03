@@ -1,4 +1,5 @@
 import type { Listing } from "../types";
+import type { Bid } from "../types";
 
 export async function getListings(): Promise<Listing[]> {
 	const res = await fetch("/api/listings");
@@ -40,4 +41,10 @@ export async function placeBid(
 		throw new Error(data.error || data.detail || "Failed to place bid");
 	}
 	return res.json();
+}
+
+export async function getBidHistory(listingId: string): Promise<Bid[]> {
+    const res = await fetch(`/api/listings/${listingId}/bidHistory`);
+    if (!res.ok) throw new Error("Failed to fetch bid history");
+    return res.json();
 }

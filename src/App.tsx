@@ -1,38 +1,48 @@
 import { useEffect, useState } from "react";
-import { getListings } from "./api/listings";
+import { getListingsPaginated  } from "./api/listings";
 import CreateListingForm from "./components/CreateListingForm";
 import ListingCard from "./components/ListingCard";
 import ListingDetail from "./components/ListingDetail";
-import type { Listing } from "./types";
+import type { Listing, ListingFilters, PaginatedListings } from "./types";
 
 export default function App() {
-	const [listings, setListings] = useState<Listing[]>([]);
+	const [result, setResult] = useState<PaginatedListings | null>(null);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [filters, setFilters] = useState<ListingFilters>({ page: 1, pageSize: 5 });
 
 	useEffect(() => {
-		getListings()
-			.then((data) => setListings(data))
+		setLoading(true);
+		getListingsPaginated(filters)
+			.then(setResult)
 			.catch((err) =>
 				setError(
 					err instanceof Error ? err.message : "Failed to load listings",
 				),
 			)
 			.finally(() => setLoading(false));
-	}, []);
+	}, [filters]);
 
+	const listings = result?.data ?? [];
+	const pagination = result?.pagination;
 	const selectedListing = listings.find((l) => l.id === selectedId) ?? null;
 
 	const handleBidSuccess = (updated: Listing) => {
-		setListings((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+		setResult((prev) =>
+			prev ? { ...prev, data: prev.data.map((l) => (l.id === updated.id ? updated : l)) } : prev
+		);
 	};
 
 	const handleListingCreated = (listing: Listing) => {
-		setListings((prev) => [...prev, listing]);
+		setFilters((f) => ({ ...f, page: 1 }));
 		setSelectedId(listing.id);
 		setShowCreateForm(false);
+	};
+
+	const setFilter = (key: keyof ListingFilters, value: any) => {
+		setFilters((f) => ({ ...f, page: 1, [key]: value || undefined }));
 	};
 
 	return (
@@ -56,21 +66,65 @@ export default function App() {
 							+ New
 						</button>
 					</div>
+					{/* Filters */}
+					<div className="filters">
+						<select onChange={(e) => setFilter("category", e.target.value)} value={filters.category ?? ""}>
+							<option value="">All Categories</option>
+							<option value="tractor">Tractor</option>
+							<option value="combine">Combine</option>
+							<option value="implement">Implement</option>
+							<option value="attachment">Attachment</option>
+						</select>
+						<select onChange={(e) => setFilter("status", e.target.value)} value={filters.status ?? ""}>
+							<option value="">All Statuses</option>
+							<option value="active">Active</option>
+							<option value="closed">Closed</option>
+							<option value="pending">Pending</option>
+						</select>
+						<select onChange={(e) => setFilter("sort", e.target.value)} value={filters.sort ?? ""}>
+							<option value="">Default Sort</option>
+							<option value="bid_asc">Price: Low to High</option>
+							<option value="bid_desc">Price: High to Low</option>
+						</select>
+					</div>
+					<br/>
 					{loading && <div className="state-message">Loading listings…</div>}
 					{error && (
 						<div className="state-message state-message--error">{error}</div>
 					)}
 					{!loading && !error && (
-						<div className="listing-grid">
-							{listings.map((listing) => (
-								<ListingCard
-									key={listing.id}
-									listing={listing}
-									isSelected={listing.id === selectedId}
-									onClick={() => setSelectedId(listing.id)}
-								/>
-							))}
-						</div>
+						<>
+							<div className="listing-grid">
+								{listings.map((listing) => (
+									<ListingCard
+										key={listing.id}
+										listing={listing}
+										isSelected={listing.id === selectedId}
+										onClick={() => setSelectedId(listing.id)}
+									/>
+								))}
+							</div>
+							<br/>
+							{/* Pagination */}
+							{pagination && pagination.totalPages > 1 && (
+								<div className="pagination">
+									<button
+										disabled={!pagination.hasPrevPage}
+										onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
+									>
+										← Prev
+									</button>{' '}
+									<span>Page {pagination.page} of {pagination.totalPages}</span>{' '}
+									<button
+										disabled={!pagination.hasNextPage}
+										onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
+									>
+										Next →
+									</button>
+								</div>
+							)}
+
+						</>
 					)}
 				</aside>
 				<main className="panel panel--right">

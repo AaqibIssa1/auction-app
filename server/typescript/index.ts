@@ -64,7 +64,47 @@ app.use(express.json());
 
 // GET /api/listings
 app.get("/api/listings", (_req: Request, res: Response) => {
+	console.log("HELLOdfsdf")
 	res.json(listings);
+});
+
+// GET /api/v2/listings - creating new API so old API doesn't break for existing consumers of it
+app.get("/api/v2/listings", (req: Request, res: Response) => {
+	console.log("HELLO")
+	const page = Math.max(1, parseInt(req.query.page as string) || 1);
+	const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize as string) || 5));
+
+	const category = req.query.category as string | undefined;
+	const status = req.query.status as string | undefined;
+	const minBid = parseFloat(req.query.minBid as string);
+	const maxBid = parseFloat(req.query.maxBid as string);
+	const sort = req.query.sort as string | undefined;
+
+	let filtered = [...listings];
+
+	if (category) filtered = filtered.filter((l) => l.category === category);
+	if (status) filtered = filtered.filter((l) => l.status === status);
+	if (!isNaN(minBid)) filtered = filtered.filter((l) => l.currentBid >= minBid);
+	if (!isNaN(maxBid)) filtered = filtered.filter((l) => l.currentBid <= maxBid);
+
+	if (sort === "bid_asc") filtered.sort((a, b) => a.currentBid - b.currentBid);
+	else if (sort === "bid_desc") filtered.sort((a, b) => b.currentBid - a.currentBid);
+
+	const total = filtered.length;
+	const totalPages = Math.ceil(total / pageSize);
+	const data = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+	res.json({
+		data,
+		pagination: {
+			page,
+			pageSize,
+			total,
+			totalPages,
+			hasNextPage: page < totalPages,
+			hasPrevPage: page > 1,
+		},
+	});
 });
 
 // POST /api/listings
@@ -151,7 +191,7 @@ app.post("/api/listings/:id/bids", (req: Request, res: Response) => {
 	return res.status(201).json(listing);
 });
 
-// GET /api/listings/:id/bids
+// GET /api/listings/:id/bidHistory
 app.get("/api/listings/:id/bidHistory", (req: Request, res: Response) => {
     const listing = listings.find((l) => l.id === req.params.id);
     if (!listing) {

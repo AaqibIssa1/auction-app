@@ -64,13 +64,11 @@ app.use(express.json());
 
 // GET /api/listings
 app.get("/api/listings", (_req: Request, res: Response) => {
-	console.log("HELLOdfsdf")
 	res.json(listings);
 });
 
 // GET /api/v2/listings - creating new API so old API doesn't break for existing consumers of it
 app.get("/api/v2/listings", (req: Request, res: Response) => {
-	console.log("HELLO")
 	const page = Math.max(1, parseInt(req.query.page as string) || 1);
 	const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize as string) || 5));
 

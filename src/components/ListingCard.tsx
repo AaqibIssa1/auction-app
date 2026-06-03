@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Listing } from "../types";
 
 interface Props {
@@ -6,19 +7,43 @@ interface Props {
 	onClick: () => void;
 }
 
-function timeRemaining(endsAt: string, status: string): string {
+function calculateTimeRemaining(endsAt: string, status: string): string {
 	if (status === "closed") return "Ended";
 	const diff = new Date(endsAt).getTime() - Date.now();
 	if (diff <= 0) return "Ended";
 	const days = Math.floor(diff / 86_400_000);
 	const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+	const minutes = Math.floor((diff % 3_600_000) / 60_000);
+	const seconds = Math.floor((diff % 60_000) / 1_000);
 	if (days > 0) return `${days} day${days === 1 ? "" : "s"} left`;
 	if (hours > 0) return `${hours} hour${hours === 1 ? "" : "s"} left`;
-	return "Less than an hour left";
+	if (minutes > 0) return `${minutes}m ${seconds}s left`;
+	return `${seconds}s left`;
 }
 
 export default function ListingCard({ listing, isSelected, onClick }: Props) {
-	const closed = listing.status === "closed";
+	const [timeRemaining, setTimeRemaining] = useState(() =>
+		calculateTimeRemaining(listing.endsAt, listing.status),
+	);
+	const [closed, setClosed] = useState(listing.status === "closed");
+
+	useEffect(() => {
+		if (listing.status === "closed") return;
+
+		const countdown = () => {
+			const diff = new Date(listing.endsAt).getTime() - Date.now();
+			if (diff <= 0) {
+				setTimeRemaining("Ended");
+				setClosed(true);
+				clearInterval(timer);
+				return;
+			}
+			setTimeRemaining(calculateTimeRemaining(listing.endsAt, listing.status));
+		};
+
+		const timer = setInterval(countdown, 1000);
+		return () => clearInterval(timer);
+	}, [listing.endsAt, listing.status]);
 
 	return (
 		<div
@@ -44,7 +69,7 @@ export default function ListingCard({ listing, isSelected, onClick }: Props) {
 				<div
 					className={`listing-card__time ${closed ? "listing-card__time--ended" : ""}`}
 				>
-					{timeRemaining(listing.endsAt, listing.status)}
+					{timeRemaining}
 				</div>
 			</div>
 		</div>
